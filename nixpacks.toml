@@ -3,8 +3,8 @@ nixPkgs = ["python3", "python3Packages.pip", "wget", "gnupg", "curl"]
 
 [phases.install]
 cmds = [
-  "python3 -m pip install --upgrade pip",
-  "python3 -m pip install -r requirements.txt"
+  "pip install --upgrade pip",
+  "pip install -r requirements.txt"
 ]
 
 [start]
