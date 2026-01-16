@@ -146,6 +146,44 @@ class CourseMonitor:
     def login(self):
         """Login to the course registration system."""
         try:
+            # Try to load cookies first if available (bypasses CAPTCHA)
+            if self.config.get('use_cookies', False):
+                cookies_file = self.config.get('cookies_file', 'cookies.json')
+                if os.path.exists(cookies_file):
+                    logging.info(f"Attempting to use cookies from {cookies_file}")
+                    try:
+                        with open(cookies_file, 'r') as f:
+                            cookies = json.load(f)
+                        
+                        # Navigate to domain first to set cookies
+                        login_url = self.config.get('login_url', 'https://flexstudent.nu.edu.pk/Account/Login')
+                        self.driver.get(login_url)
+                        time.sleep(2)
+                        
+                        # Add cookies
+                        for cookie in cookies:
+                            try:
+                                # Remove 'expiry' if present (Selenium doesn't like it)
+                                if 'expiry' in cookie:
+                                    del cookie['expiry']
+                                self.driver.add_cookie(cookie)
+                            except Exception as e:
+                                logging.debug(f"Could not add cookie: {str(e)}")
+                        
+                        # Refresh page
+                        self.driver.refresh()
+                        time.sleep(3)
+                        
+                        # Check if we're logged in now
+                        current_url = self.driver.current_url
+                        if 'Login' not in current_url or 'Account/Login' not in current_url:
+                            logging.info(f"✅ Successfully logged in using cookies! Current URL: {current_url}")
+                            return True
+                        else:
+                            logging.warning("Cookies loaded but still on login page. Will try normal login.")
+                    except Exception as e:
+                        logging.error(f"Failed to load cookies: {str(e)}")
+            
             login_url = self.config.get('login_url', 'https://flexstudent.nu.edu.pk/Account/Login')
             logging.info(f"Navigating to login page: {login_url}")
             self.driver.get(login_url)
@@ -171,36 +209,11 @@ class CourseMonitor:
             
             if has_captcha:
                 logging.warning("⚠️ CAPTCHA detected on login page!")
-                
-                # Try to load cookies if available
-                if self.config.get('use_cookies', False):
-                    cookies_file = self.config.get('cookies_file', 'cookies.json')
-                    if os.path.exists(cookies_file):
-                        logging.info(f"Loading cookies from {cookies_file}")
-                        try:
-                            with open(cookies_file, 'r') as f:
-                                cookies = json.load(f)
-                            for cookie in cookies:
-                                try:
-                                    self.driver.add_cookie(cookie)
-                                except:
-                                    pass
-                            self.driver.refresh()
-                            time.sleep(2)
-                            # Check if we're logged in now
-                            if 'Login' not in self.driver.current_url:
-                                logging.info("Successfully logged in using cookies!")
-                                return True
-                        except Exception as e:
-                            logging.error(f"Failed to load cookies: {str(e)}")
-                
-                logging.error("CAPTCHA blocks automated login. Solutions:")
-                logging.error("1. Manually login in browser, export cookies, and use USE_COOKIES=true")
-                logging.error("2. Use a CAPTCHA solving service (2captcha.com - paid)")
-                logging.error("3. Check if CAPTCHA only appears after failed attempts")
-                logging.error("4. Try logging in manually first, then run the monitor")
-                # Continue anyway - sometimes CAPTCHA appears but login still works
-                logging.warning("Attempting login anyway (CAPTCHA may not block if credentials are correct)...")
+                logging.warning("CAPTCHA blocks automated login. Solutions:")
+                logging.warning("1. Use session cookies (set USE_COOKIES=true)")
+                logging.warning("2. Manually login in browser and export cookies using export_cookies.py")
+                logging.warning("3. Use a CAPTCHA solving service (2captcha.com - paid)")
+                logging.warning("Attempting login anyway (may fail if CAPTCHA is required)...")
             
             # Wait for login form
             wait = WebDriverWait(self.driver, 15)
