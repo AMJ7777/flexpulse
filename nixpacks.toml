@@ -1,0 +1,10 @@
+[phases.setup]
+nixPkgs = ["python3", "pip", "wget", "gnupg", "google-chrome"]
+
+[phases.install]
+cmds = [
+  "pip install -r requirements.txt"
+]
+
+[start]
+cmd = "python course_monitor.py"
