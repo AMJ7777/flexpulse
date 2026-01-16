@@ -61,6 +61,8 @@ class CourseMonitor:
                 'username': os.getenv('REGISTRATION_USERNAME', ''),
                 'password': os.getenv('REGISTRATION_PASSWORD', '')
             },
+            'use_cookies': os.getenv('USE_COOKIES', 'false').lower() == 'true',
+            'cookies_file': os.getenv('COOKIES_FILE', 'cookies.json'),
             'login_url': os.getenv('LOGIN_URL', 'https://flexstudent.nu.edu.pk/Account/Login'),
             'registration_url': os.getenv('REGISTRATION_URL', 'https://flexstudent.nu.edu.pk/Student/CourseRegistrationBS'),
             'username_field_id': os.getenv('USERNAME_FIELD_ID', 'Username'),
@@ -149,7 +151,56 @@ class CourseMonitor:
             self.driver.get(login_url)
             
             # Wait for page to load
-            time.sleep(2)
+            time.sleep(3)
+            
+            # Check for CAPTCHA
+            captcha_indicators = [
+                'captcha',
+                'recaptcha',
+                'hcaptcha',
+                'cloudflare',
+                'challenge',
+                'verify you are human'
+            ]
+            
+            page_source_lower = self.driver.page_source.lower()
+            page_title_lower = self.driver.title.lower()
+            
+            has_captcha = any(indicator in page_source_lower or indicator in page_title_lower 
+                            for indicator in captcha_indicators)
+            
+            if has_captcha:
+                logging.warning("⚠️ CAPTCHA detected on login page!")
+                
+                # Try to load cookies if available
+                if self.config.get('use_cookies', False):
+                    cookies_file = self.config.get('cookies_file', 'cookies.json')
+                    if os.path.exists(cookies_file):
+                        logging.info(f"Loading cookies from {cookies_file}")
+                        try:
+                            with open(cookies_file, 'r') as f:
+                                cookies = json.load(f)
+                            for cookie in cookies:
+                                try:
+                                    self.driver.add_cookie(cookie)
+                                except:
+                                    pass
+                            self.driver.refresh()
+                            time.sleep(2)
+                            # Check if we're logged in now
+                            if 'Login' not in self.driver.current_url:
+                                logging.info("Successfully logged in using cookies!")
+                                return True
+                        except Exception as e:
+                            logging.error(f"Failed to load cookies: {str(e)}")
+                
+                logging.error("CAPTCHA blocks automated login. Solutions:")
+                logging.error("1. Manually login in browser, export cookies, and use USE_COOKIES=true")
+                logging.error("2. Use a CAPTCHA solving service (2captcha.com - paid)")
+                logging.error("3. Check if CAPTCHA only appears after failed attempts")
+                logging.error("4. Try logging in manually first, then run the monitor")
+                # Continue anyway - sometimes CAPTCHA appears but login still works
+                logging.warning("Attempting login anyway (CAPTCHA may not block if credentials are correct)...")
             
             # Wait for login form
             wait = WebDriverWait(self.driver, 15)
