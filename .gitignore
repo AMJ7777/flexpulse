@@ -1,0 +1,54 @@
+# Configuration files with sensitive data
+monitor_config.json
+.env
+*.env
+
+# Logs
+*.log
+course_monitor.log
+monitor_output.log
+monitor_error.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation (keep README.md, exclude others)
+DEPLOY_CLOUD.md
+CLOUD_QUICK_START.md
+FREE_CLOUD_OPTIONS.md
+FREE_SETUP_GUIDE.md
+RENDER_AWAKE_EXPLANATION.md
+QUICK_START.md
+
+# Setup scripts (not needed for deployment)
+deploy_cloud.sh
+deploy_systemd.sh
+aws_quick_setup.sh
+
+# Other project files
+helloworld.html
+traffic_optimization_ai.tex
+
+# Browser logs
+browser-logs/

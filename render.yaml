@@ -1,0 +1,11 @@
+services:
+  - type: worker
+    name: course-monitor
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python course_monitor.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      # Add your environment variables in Render dashboard
+      # Don't put sensitive data here in version control
