@@ -1,10 +1,11 @@
 [phases.setup]
-nixPkgs = ["python3", "wget", "gnupg", "curl"]
+nixPkgs = ["python3", "python3Packages.pip", "wget", "gnupg", "curl"]
 
 [phases.install]
 cmds = [
-  "pip install -r requirements.txt"
+  "python3 -m pip install --upgrade pip",
+  "python3 -m pip install -r requirements.txt"
 ]
 
 [start]
-cmd = "python course_monitor.py"
+cmd = "python3 course_monitor.py"
