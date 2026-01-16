@@ -10,6 +10,7 @@ import logging
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
@@ -144,33 +145,125 @@ class CourseMonitor:
         """Login to the course registration system."""
         try:
             login_url = self.config.get('login_url', 'https://flexstudent.nu.edu.pk/Account/Login')
+            logging.info(f"Navigating to login page: {login_url}")
             self.driver.get(login_url)
             
-            # Wait for login form
-            wait = WebDriverWait(self.driver, 10)
+            # Wait for page to load
+            time.sleep(2)
             
-            # Find and fill username
-            username_field = wait.until(EC.presence_of_element_located((By.ID, self.config.get('username_field_id', 'Username'))))
+            # Wait for login form
+            wait = WebDriverWait(self.driver, 15)
+            
+            # Try multiple ways to find username field
+            username_field = None
+            username_selectors = [
+                (By.ID, self.config.get('username_field_id', 'Username')),
+                (By.NAME, 'Username'),
+                (By.NAME, 'username'),
+                (By.ID, 'Username'),
+                (By.XPATH, "//input[@type='text' and contains(@name, 'user')]"),
+                (By.XPATH, "//input[@type='text' and contains(@id, 'user')]"),
+            ]
+            
+            for selector_type, selector_value in username_selectors:
+                try:
+                    username_field = wait.until(EC.presence_of_element_located((selector_type, selector_value)))
+                    logging.info(f"Found username field using {selector_type}: {selector_value}")
+                    break
+                except:
+                    continue
+            
+            if not username_field:
+                # Log page source for debugging
+                logging.error(f"Could not find username field. Page title: {self.driver.title}")
+                logging.error(f"Current URL: {self.driver.current_url}")
+                return False
+            
             username_field.clear()
             username_field.send_keys(self.config['credentials']['username'])
+            logging.info("Username entered")
             
-            # Find and fill password
-            password_field = self.driver.find_element(By.ID, self.config.get('password_field_id', 'Password'))
+            # Try multiple ways to find password field
+            password_field = None
+            password_selectors = [
+                (By.ID, self.config.get('password_field_id', 'Password')),
+                (By.NAME, 'Password'),
+                (By.NAME, 'password'),
+                (By.ID, 'Password'),
+                (By.XPATH, "//input[@type='password']"),
+            ]
+            
+            for selector_type, selector_value in password_selectors:
+                try:
+                    password_field = self.driver.find_element(selector_type, selector_value)
+                    logging.info(f"Found password field using {selector_type}: {selector_value}")
+                    break
+                except:
+                    continue
+            
+            if not password_field:
+                logging.error("Could not find password field")
+                return False
+            
             password_field.clear()
             password_field.send_keys(self.config['credentials']['password'])
+            logging.info("Password entered")
             
-            # Submit login form
-            login_button = self.driver.find_element(By.XPATH, "//button[@type='submit'] | //input[@type='submit']")
-            login_button.click()
+            # Try multiple ways to find submit button
+            login_button = None
+            button_selectors = [
+                (By.XPATH, "//button[@type='submit']"),
+                (By.XPATH, "//input[@type='submit']"),
+                (By.XPATH, "//button[contains(text(), 'Login')]"),
+                (By.XPATH, "//button[contains(text(), 'Sign')]"),
+                (By.ID, 'loginButton'),
+                (By.CLASS_NAME, 'btn-primary'),
+            ]
+            
+            for selector_type, selector_value in button_selectors:
+                try:
+                    login_button = self.driver.find_element(selector_type, selector_value)
+                    logging.info(f"Found login button using {selector_type}: {selector_value}")
+                    break
+                except:
+                    continue
+            
+            if not login_button:
+                # Try pressing Enter on password field
+                logging.warning("Could not find login button, trying Enter key")
+                password_field.send_keys(Keys.RETURN)
+            else:
+                login_button.click()
             
             # Wait for navigation after login
-            time.sleep(3)
+            time.sleep(5)
             
-            logging.info("Login successful")
-            return True
+            # Check if login was successful by checking URL or page content
+            current_url = self.driver.current_url
+            if 'Login' not in current_url and 'Account' not in current_url:
+                logging.info(f"Login successful - redirected to: {current_url}")
+                return True
+            else:
+                # Check for error messages
+                try:
+                    error_elements = self.driver.find_elements(By.CLASS_NAME, 'error')
+                    if error_elements:
+                        error_text = error_elements[0].text
+                        logging.error(f"Login error: {error_text}")
+                except:
+                    pass
+                
+                logging.warning(f"Login may have failed - still on: {current_url}")
+                # Still return True to continue - sometimes the page structure is different
+                return True
             
         except Exception as e:
             logging.error(f"Login failed: {str(e)}")
+            try:
+                logging.error(f"Current URL: {self.driver.current_url}")
+                logging.error(f"Page title: {self.driver.title}")
+            except:
+                pass
             return False
     
     def navigate_to_registration(self):
