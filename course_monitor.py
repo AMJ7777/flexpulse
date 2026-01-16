@@ -500,10 +500,20 @@ class NotificationService:
 
 
 if __name__ == "__main__":
-    # Check if config file exists
+    # Try to use config file, but fall back to environment variables if not found
     config_file = 'monitor_config.json'
-    if not os.path.exists(config_file):
-        print(f"Config file {config_file} not found. Please create it first.")
+    
+    # Check if we have environment variables set (for cloud deployments)
+    has_env_vars = (
+        os.getenv('REGISTRATION_USERNAME') and 
+        os.getenv('REGISTRATION_PASSWORD')
+    )
+    
+    if not os.path.exists(config_file) and not has_env_vars:
+        print(f"Config file {config_file} not found and no environment variables set.")
+        print("Please either:")
+        print("1. Create monitor_config.json with your credentials, OR")
+        print("2. Set environment variables (REGISTRATION_USERNAME, REGISTRATION_PASSWORD, etc.)")
         exit(1)
     
     monitor = CourseMonitor(config_file)
