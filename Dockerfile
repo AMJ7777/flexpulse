@@ -34,7 +34,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
 COPY course_monitor.py .
-COPY health_check.py .
 
 # Create directory for logs
 RUN mkdir -p /app/logs
